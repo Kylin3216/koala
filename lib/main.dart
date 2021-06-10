@@ -57,7 +57,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: SafeArea(
         child: ListView(
-            children: ["SuperMario", "Contra", "Fighters", "Island", "BattleCity"]
+            children: ["SuperMario", "Contra", "Fighters", "Island", "BattleCity", "Takahashi"]
                 .map((e) => ListTile(
                       onTap: () {
                         _openGame(e);
