@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
@@ -81,7 +83,8 @@ class JoyPad extends StatelessWidget {
           ),
           Align(
             alignment: Alignment.bottomLeft,
-            child: DirectionPad(directionPadTap: padTap),
+            // child: DirectionPad(directionPadTap: padTap),
+            child: DirectionJoyStick(padTap: padTap),
           ),
           Align(
             alignment: Alignment.bottomRight,
@@ -448,5 +451,110 @@ class JoyPadButton extends StatelessWidget {
         child: child,
       ),
     );
+  }
+}
+
+/// 方向键摇杆
+class DirectionJoyStick extends StatefulWidget {
+  final JoyPadTap padTap;
+
+  const DirectionJoyStick({required this.padTap, Key? key}) : super(key: key);
+
+  @override
+  _DirectionJoyStickState createState() => _DirectionJoyStickState();
+}
+
+class _DirectionJoyStickState extends State<DirectionJoyStick> {
+  Offset delta = Offset.zero;
+  final Map<DirectionPadKey, bool> _tempList = {
+    DirectionPadKey.Left: false,
+    DirectionPadKey.Top: false,
+    DirectionPadKey.Right: false,
+    DirectionPadKey.Bottom: false,
+  };
+
+  final double bgSize = 120;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: bgSize,
+      height: bgSize,
+      margin: const EdgeInsets.all(10),
+      child: Container(
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(bgSize / 2)),
+        child: GestureDetector(
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.withOpacity(0.6),
+              borderRadius: BorderRadius.circular(bgSize / 2),
+            ),
+            child: Center(
+              child: Transform.translate(
+                offset: delta,
+                child: SizedBox(
+                  width: bgSize / 2,
+                  height: bgSize / 2,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Color(0xccffffff),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          onPanDown: (d) => _calculateDelta(d.localPosition),
+          onPanUpdate: (d) => _calculateDelta(d.localPosition),
+          onPanEnd: (d) => _updateDelta(Offset.zero),
+        ),
+      ),
+    );
+  }
+
+  void _calculateDelta(Offset offset) {
+    Offset newD = offset - Offset(bgSize / 2, bgSize / 2);
+    _updateDelta(Offset.fromDirection(newD.direction, min(bgSize / 4, newD.distance)));
+  }
+
+  void _updateDelta(Offset offset) {
+    final Map<DirectionPadKey, bool> tempList = {
+      DirectionPadKey.Left: false,
+      DirectionPadKey.Top: false,
+      DirectionPadKey.Right: false,
+      DirectionPadKey.Bottom: false,
+    };
+    final t = tan(bgSize / 4 * pi / 180);
+    if (offset != Offset.zero) {
+      final dx = offset.dx.abs();
+      final dy = offset.dy.abs();
+      if (dx > dy) {
+        if (dy > dx * t) {
+          tempList[offset.dx.isNegative ? DirectionPadKey.Left : DirectionPadKey.Right] = true;
+          tempList[offset.dy.isNegative ? DirectionPadKey.Top : DirectionPadKey.Bottom] = true;
+        } else {
+          tempList[offset.dx.isNegative ? DirectionPadKey.Left : DirectionPadKey.Right] = true;
+        }
+      } else {
+        if (dx > dy * t) {
+          tempList[offset.dx.isNegative ? DirectionPadKey.Left : DirectionPadKey.Right] = true;
+          tempList[offset.dy.isNegative ? DirectionPadKey.Top : DirectionPadKey.Bottom] = true;
+        } else {
+          tempList[offset.dy.isNegative ? DirectionPadKey.Top : DirectionPadKey.Bottom] = true;
+        }
+      }
+    }
+    _tempList.entries.forEach((element) {
+      if (!element.value && tempList[element.key]!) {
+        widget.padTap(element.key, PadTapAction.LongPress);
+      } else if (element.value && !tempList[element.key]!) {
+        widget.padTap(element.key, PadTapAction.LongPressEnd);
+      }
+      _tempList[element.key] = tempList[element.key]!;
+    });
+    setState(() {
+      delta = offset;
+    });
   }
 }
